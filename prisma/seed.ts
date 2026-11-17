@@ -1,4 +1,4 @@
-import { PrismaClient, SkillLevel, JobStatus, WorkMode } from "@prisma/client";
+import { PrismaClient, SkillLevel, JobStatus, WorkMode, OfferStatus, NotificationType, NotificationChannel, AlertFrequency } from "@prisma/client";
 import { createHash } from "node:crypto";
 
 const prisma = new PrismaClient();
@@ -63,7 +63,7 @@ async function main() {
     },
   });
 
-  await prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       employerId: employer.id,
       title: "Senior Frontend Engineer",
@@ -79,6 +79,67 @@ async function main() {
           { skillId: byName["React"].id, minLevel: SkillLevel.ADVANCED },
         ],
       },
+    },
+  });
+
+  const profile = await prisma.candidateProfile.findUniqueOrThrow({ where: { userId: candidateUser.id } });
+
+  await prisma.education.create({
+    data: { candidateId: profile.id, institution: "University of Lagos", degree: "BSc", fieldOfStudy: "Computer Science", startYear: 2012, endYear: 2016 },
+  });
+  await prisma.workExperience.create({
+    data: {
+      candidateId: profile.id,
+      company: "Paystack Labs",
+      title: "Software Engineer",
+      workMode: WorkMode.HYBRID,
+      startDate: new Date("2018-03-01"),
+      summary: "Built payment dashboards in React and TypeScript.",
+    },
+  });
+  await prisma.certification.create({
+    data: {
+      candidateId: profile.id,
+      name: "Certified Kubernetes Application Developer",
+      issuer: "CNCF",
+      credentialId: "CKAD-DEMO-0001",
+      issuedAt: new Date("2022-06-15"),
+      expiresAt: new Date("2025-06-15"),
+    },
+  });
+  await prisma.skillEndorsement.create({
+    data: { candidateId: profile.id, skillId: byName["TypeScript"].id, endorserId: recruiter.id, note: "Strong typing instincts." },
+  });
+  await prisma.jobAlert.create({
+    data: { candidateId: profile.id, query: "frontend engineer", workMode: WorkMode.REMOTE, minSalary: 100000, frequency: AlertFrequency.DAILY },
+  });
+
+  const application = await prisma.application.create({
+    data: { jobId: job.id, candidateId: profile.id, status: "OFFER", matchScore: 0.91 },
+  });
+  await prisma.offer.create({
+    data: {
+      applicationId: application.id,
+      title: "Senior Frontend Engineer",
+      salary: 135000,
+      status: OfferStatus.SENT,
+      sentAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+    },
+  });
+  await prisma.review.create({
+    data: { employerId: employer.id, authorId: candidateUser.id, rating: 4, title: "Thoughtful hiring process", body: "Clear communication at every stage." },
+  });
+  await prisma.referral.create({
+    data: { jobId: job.id, referrerId: candidateUser.id, refereeEmail: "friend@example.com", code: "REF-ADA-0001" },
+  });
+  await prisma.notification.create({
+    data: {
+      userId: candidateUser.id,
+      type: NotificationType.OFFER_RECEIVED,
+      channel: NotificationChannel.IN_APP,
+      title: "You have a new offer",
+      body: "Northwind Labs sent you an offer for Senior Frontend Engineer.",
     },
   });
 

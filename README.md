@@ -85,7 +85,7 @@ SkillBridge/
 │   └── extension/      # Chrome MV3 job-saver extension
 ├── services/
 │   ├── matcher/        # FastAPI scoring + resume parsing (data/, tests/)
-│   └── gateway/        # Go WebSocket gateway + search index
+│   └── gateway/        # Small Go side-service: WebSocket gateway + search index
 ├── packages/
 │   ├── types/          # Shared TypeScript domain and API types
 │   └── utils/          # Shared helpers (retry, pagination, dates)
@@ -193,6 +193,16 @@ REST API served by the Express app. Authenticated routes expect a `Bearer` JWT. 
 | PATCH | `/interviews/:id/confirm` | Any | Confirm an interview |
 | GET | `/messages/conversations` | Any | List conversations |
 | POST | `/messages/conversations/:id/messages` | Any | Send a message |
+| GET | `/profile` | Candidate | Profile with education, experience, certifications |
+| POST | `/profile/{educations,experiences,certifications}` | Candidate | Add a profile entry |
+| POST | `/offers` | Employer | Draft an offer for an application |
+| POST | `/offers/:id/send` | Employer | Send an offer and notify the candidate |
+| POST | `/offers/:id/respond` | Candidate | Accept or decline an offer |
+| GET / PUT | `/employers/:id/reviews` | Any / Candidate | Read or write employer reviews |
+| POST | `/referrals` | Any | Refer someone to an open job |
+| POST | `/candidates/:id/endorsements` | Any | Endorse a candidate's skill |
+| PUT | `/interviews/:id/feedback` | Employer | Submit interview feedback |
+| GET | `/notifications` | Any | In-app notifications with unread count |
 | GET | `/dashboard/summary` | Employer | Pipeline statistics |
 
 **Internal services**
@@ -210,11 +220,14 @@ Defined in [`prisma/schema.prisma`](prisma/schema.prisma) with migrations in `pr
 |------|--------|
 | Identity | `User`, `CandidateProfile`, `Employer`, `EmployerMember` |
 | Skills | `Skill`, `CandidateSkill`, `JobSkill` |
-| Hiring | `Job`, `Application`, `Interview`, `SavedJob` |
+| Hiring | `Job`, `Application`, `Interview`, `InterviewFeedback`, `Offer`, `SavedJob`, `Referral` |
+| Profile history | `Education`, `WorkExperience`, `Certification`, `SkillEndorsement`, `ProfileView` |
+| Community | `Review`, `JobAlert` |
+| Notifications and audit | `Notification`, `PushSubscription`, `AuditLog` |
 | Assessments | `Assessment`, `AssessmentQuestion`, `AssessmentAttempt` |
-| Messaging | `Conversation`, `ConversationParticipant`, `Message` |
+| Messaging | `Conversation`, `ConversationParticipant`, `Message`, `MessageAttachment` |
 
-Enums: `Role` (`CANDIDATE`, `EMPLOYER`, `ADMIN`), `JobStatus`, `ApplicationStatus`, `SkillLevel`, `InterviewStatus`, `WorkMode`.
+Enums: `Role` (`CANDIDATE`, `EMPLOYER`, `ADMIN`), `JobStatus`, `ApplicationStatus`, `SkillLevel`, `InterviewStatus`, `WorkMode`, `OfferStatus`, `ReferralStatus`, `NotificationType`, `NotificationChannel`, `AlertFrequency`.
 
 ## Testing
 
@@ -225,7 +238,7 @@ make gateway-test   # cd services/gateway && go test ./...
 make lint           # ESLint
 ```
 
-The API test suite (Vitest) covers health, auth, matching, grading and error handling. GitHub Actions ([ci.yml](.github/workflows/ci.yml)) runs Node lint and tests, Python tests, and Go vet and tests on every pull request. CodeQL analysis runs in [codeql.yml](.github/workflows/codeql.yml).
+The API test suite (Vitest) covers health, auth, matching, grading, offers, validators, review and referral services, and error handling. GitHub Actions ([ci.yml](.github/workflows/ci.yml)) runs Node lint and tests, Python tests, and Go vet and tests on every pull request. CodeQL analysis runs in [codeql.yml](.github/workflows/codeql.yml).
 
 ## Deployment
 

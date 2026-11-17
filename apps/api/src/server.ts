@@ -5,6 +5,9 @@ import { applicationsRouter } from "./routes/applications";
 import { assessmentsRouter } from "./routes/assessments";
 import { interviewsRouter } from "./routes/interviews";
 import { messagesRouter } from "./routes/messages";
+import { profileRouter } from "./routes/profile";
+import { offersRouter } from "./routes/offers";
+import { communityRouter } from "./routes/community";
 import { dashboardRouter } from "./routes/dashboard";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireAuth } from "./middleware/auth";
@@ -20,6 +23,9 @@ export function createApp() {
   app.use("/assessments", requireAuth(), assessmentsRouter);
   app.use("/interviews", requireAuth(), interviewsRouter);
   app.use("/messages", requireAuth(), messagesRouter);
+  app.use("/profile", requireAuth("CANDIDATE"), profileRouter);
+  app.use("/offers", requireAuth(), offersRouter);
+  app.use("/", requireAuth(), communityRouter);
   app.use("/dashboard", requireAuth("EMPLOYER"), dashboardRouter);
 
   app.use(errorHandler);

@@ -50,6 +50,44 @@ enum WorkMode {
   REMOTE
 }
 
+enum OfferStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  RESCINDED
+}
+
+enum ReferralStatus {
+  PENDING
+  APPLIED
+  HIRED
+  EXPIRED
+}
+
+enum NotificationType {
+  APPLICATION_UPDATE
+  INTERVIEW_SCHEDULED
+  INTERVIEW_REMINDER
+  OFFER_RECEIVED
+  NEW_MESSAGE
+  JOB_ALERT
+  ENDORSEMENT
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum AlertFrequency {
+  INSTANT
+  DAILY
+  WEEKLY
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -61,6 +99,13 @@ model User {
   employerMember EmployerMember?
   sentMessages Message[] @relation("SentMessages")
   participants ConversationParticipant[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  endorsementsGiven SkillEndorsement[]  @relation("EndorsementsGiven")
+  reviewsWritten    Review[]            @relation("ReviewsWritten")
+  referralsMade     Referral[]          @relation("ReferralsMade")
+  feedbackGiven     InterviewFeedback[] @relation("FeedbackGiven")
+  auditLogs         AuditLog[]
 }
 
 model CandidateProfile {
@@ -76,6 +121,12 @@ model CandidateProfile {
   assessments AssessmentAttempt[]
   applications Application[]
   savedJobs   SavedJob[]
+  educations   Education[]
+  experiences  WorkExperience[]
+  certifications Certification[]
+  endorsements SkillEndorsement[]
+  jobAlerts    JobAlert[]
+  profileViews ProfileView[]
 }
 
 model Skill {
@@ -85,6 +136,7 @@ model Skill {
   candidates CandidateSkill[]
   jobSkills  JobSkill[]
   assessments Assessment[]
+  endorsements SkillEndorsement[]
 }
 
 model CandidateSkill {
@@ -140,6 +192,8 @@ model Employer {
   industry String?
   members  EmployerMember[]
   jobs     Job[]
+  reviews  Review[]
+  profileViews ProfileView[]
 }
 
 model EmployerMember {
@@ -167,6 +221,7 @@ model Job {
   skills      JobSkill[]
   applications Application[]
   savedBy     SavedJob[]
+  referrals   Referral[]
 
   @@index([status, postedAt])
   @@index([employerId])
@@ -195,6 +250,7 @@ model Application {
   coverLetter String?
   createdAt   DateTime @default(now())
   interviews  Interview[]
+  offers      Offer[]
 
   @@unique([jobId, candidateId])
   @@index([candidateId])
@@ -208,6 +264,7 @@ model Interview {
   durationMinutes Int @default(45)
   meetingUrl    String?
   status        InterviewStatus @default(PROPOSED)
+  feedback      InterviewFeedback[]
 
   @@index([applicationId, startsAt])
 }
@@ -247,6 +304,228 @@ model Message {
   sentAt         DateTime @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User @relation("SentMessages", fields: [senderId], references: [id])
+  attachments    MessageAttachment[]
 
   @@index([conversationId, sentAt])
+}
+
+model Education {
+  id          String   @id @default(cuid())
+  candidateId String
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  institution String
+  degree      String
+  fieldOfStudy String?
+  startYear   Int
+  endYear     Int?
+  gpa         Decimal? @db.Decimal(3, 2)
+
+  @@index([candidateId, startYear])
+  @@map("educations")
+}
+
+model WorkExperience {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  company     String
+  title       String
+  location    String?
+  workMode    WorkMode  @default(ONSITE)
+  startDate   DateTime  @db.Date
+  endDate     DateTime? @db.Date
+  summary     String?
+
+  @@index([candidateId, startDate])
+  @@map("work_experiences")
+}
+
+model Certification {
+  id            String    @id @default(cuid())
+  candidateId   String
+  candidate     CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  name          String
+  issuer        String
+  credentialId  String?
+  credentialUrl String?
+  issuedAt      DateTime  @db.Date
+  expiresAt     DateTime? @db.Date
+
+  @@unique([candidateId, issuer, credentialId])
+  @@index([expiresAt])
+  @@map("certifications")
+}
+
+model SkillEndorsement {
+  id          String   @id @default(cuid())
+  candidateId String
+  skillId     String
+  endorserId  String
+  note        String?
+  createdAt   DateTime @default(now())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skillId], references: [id])
+  endorser    User     @relation("EndorsementsGiven", fields: [endorserId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, skillId, endorserId])
+  @@index([candidateId, skillId])
+  @@map("skill_endorsements")
+}
+
+model Offer {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title         String
+  salary        Int
+  currency      String      @default("USD")
+  equityPercent Decimal?    @db.Decimal(5, 3)
+  startDate     DateTime?   @db.Date
+  status        OfferStatus @default(DRAFT)
+  sentAt        DateTime?
+  respondedAt   DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId, status])
+  @@index([status, expiresAt])
+  @@map("offers")
+}
+
+model InterviewFeedback {
+  id            String   @id @default(cuid())
+  interviewId   String
+  reviewerId    String
+  interview     Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  reviewer      User      @relation("FeedbackGiven", fields: [reviewerId], references: [id])
+  technicalScore Int
+  communicationScore Int
+  recommendation Boolean
+  comments      String?
+  submittedAt   DateTime @default(now())
+
+  @@unique([interviewId, reviewerId])
+  @@map("interview_feedback")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  employerId String
+  authorId   String
+  employer   Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  author     User     @relation("ReviewsWritten", fields: [authorId], references: [id], onDelete: Cascade)
+  rating     Int
+  title      String
+  body       String
+  anonymous  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([employerId, authorId])
+  @@index([employerId, createdAt])
+  @@map("reviews")
+}
+
+model Referral {
+  id            String         @id @default(cuid())
+  jobId         String
+  referrerId    String
+  job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  referrer      User           @relation("ReferralsMade", fields: [referrerId], references: [id], onDelete: Cascade)
+  refereeEmail  String
+  code          String         @unique
+  status        ReferralStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+
+  @@index([jobId, status])
+  @@index([refereeEmail])
+  @@map("referrals")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  body      String
+  payload   Json?
+  readAt    DateTime?
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model JobAlert {
+  id          String         @id @default(cuid())
+  candidateId String
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  query       String
+  location    String?
+  workMode    WorkMode?
+  minSalary   Int?
+  frequency   AlertFrequency @default(DAILY)
+  active      Boolean        @default(true)
+  lastSentAt  DateTime?
+
+  @@index([active, frequency])
+  @@map("job_alerts")
+}
+
+model ProfileView {
+  id          String   @id @default(cuid())
+  candidateId String
+  employerId  String
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  employer    Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  viewedAt    DateTime @default(now())
+
+  @@index([candidateId, viewedAt])
+  @@index([employerId])
+  @@map("profile_views")
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName  String
+  mimeType  String
+  sizeBytes Int
+  url       String
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
 }
