@@ -1,0 +1,8 @@
+{
+  "js": "javascript",
+  "ts": "typescript",
+  "golang": "go",
+  "postgres": "postgresql",
+  "k8s": "kubernetes",
+  "ml": "machine learning"
+}

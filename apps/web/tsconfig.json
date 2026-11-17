@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "jsx": "preserve", "lib": ["dom", "esnext"], "plugins": [{ "name": "next" }], "noEmit": true },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

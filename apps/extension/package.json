@@ -1,0 +1,6 @@
+{
+  "name": "@skillbridge/extension",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": { "pack": "node ../../scripts/check-env.js && zip -r extension.zip manifest.json src" }
+}

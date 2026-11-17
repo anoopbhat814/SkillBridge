@@ -1,0 +1,12 @@
+[project]
+name = "skillbridge-matcher"
+version = "0.4.0"
+description = "Resume parsing and skill matching service for SkillBridge"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100

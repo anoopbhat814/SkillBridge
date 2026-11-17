@@ -1,0 +1,17 @@
+name: Release
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node scripts/release-notes.js > RELEASE_NOTES.md
+      - uses: softprops/action-gh-release@v1
+        with: { body_path: RELEASE_NOTES.md }

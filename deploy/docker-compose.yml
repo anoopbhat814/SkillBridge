@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: skillbridge
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: skillbridge
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  api:
+    build: { context: .., dockerfile: deploy/api.Dockerfile }
+    env_file: ../.env
+    depends_on: [postgres, redis]
+    ports: ["4000:4000"]
+  web:
+    build: { context: .., dockerfile: deploy/web.Dockerfile }
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:4000
+    depends_on: [api]
+    ports: ["3000:3000"]
+  matcher:
+    build: { context: .., dockerfile: deploy/matcher.Dockerfile }
+    ports: ["8000:8000"]
+  gateway:
+    build: { context: .., dockerfile: deploy/gateway.Dockerfile }
+    environment:
+      REDIS_ADDR: redis:6379
+    depends_on: [redis]
+    ports: ["8080:8080"]
+  worker:
+    build: { context: .., dockerfile: deploy/worker.Dockerfile }
+    env_file: ../.env
+    depends_on: [redis]
+
+volumes:
+  pgdata:

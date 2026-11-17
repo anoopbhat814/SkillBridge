@@ -1,0 +1,7 @@
+{
+  "languages": ["javascript", "typescript", "python", "go", "java", "rust", "sql"],
+  "frontend": ["react", "next.js", "vue", "tailwind css", "html", "css"],
+  "backend": ["node.js", "express", "fastapi", "django", "graphql", "rest"],
+  "data": ["postgresql", "redis", "mongodb", "pandas", "machine learning"],
+  "devops": ["docker", "kubernetes", "terraform", "github actions", "aws"]
+}
