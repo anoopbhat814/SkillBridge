@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: node scripts/release-notes.js > RELEASE_NOTES.md
-      - uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v3
         with: { body_path: RELEASE_NOTES.md }
